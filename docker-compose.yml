@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: museum-postgres
+    environment:
+      POSTGRES_DB: museum_db
+      POSTGRES_USER: museum_user
+      POSTGRES_PASSWORD: museum_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    container_name: museum-api
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+    depends_on:
+      - postgres
+    command: ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  notebook:
+    build:
+      context: .
+      dockerfile: docker/notebook.Dockerfile
+    container_name: museum-notebook
+    env_file:
+      - .env
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./:/app
+      - ./data:/app/data
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
