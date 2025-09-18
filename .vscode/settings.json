@@ -1,3 +1,17 @@
 {
-    "python.defaultInterpreterPath": "./.venv/Scripts/python.exe"
+    "python.defaultInterpreterPath": "./.venv/Scripts/python.exe",
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "postgres docker",
+            "database": "museum_db",
+            "username": "museum_user"
+        }
+    ]
 }

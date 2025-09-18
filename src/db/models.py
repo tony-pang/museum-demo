@@ -1,5 +1,5 @@
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, Float, ForeignKey, UniqueConstraint
+from sqlalchemy import Integer, String, ForeignKey, UniqueConstraint
 
 
 class Base(DeclarativeBase):
@@ -14,9 +14,6 @@ class City(Base):
     country: Mapped[str | None] = mapped_column(String(255))
     population: Mapped[int | None] = mapped_column(Integer)
     population_year: Mapped[int | None] = mapped_column(Integer)
-    lat: Mapped[float | None] = mapped_column(Float)
-    lon: Mapped[float | None] = mapped_column(Float)
-    source: Mapped[str | None] = mapped_column(String(255))
     last_updated: Mapped[str | None] = mapped_column(String(64))
 
     museums: Mapped[list["Museum"]] = relationship(back_populates="city")
@@ -28,10 +25,6 @@ class Museum(Base):
     wikidata_id: Mapped[str | None] = mapped_column(String(32), index=True)
     name: Mapped[str] = mapped_column(String(255), index=True)
     city_id: Mapped[int | None] = mapped_column(ForeignKey("cities.id"))
-    wikipedia_url: Mapped[str | None] = mapped_column(String(512))
-    lat: Mapped[float | None] = mapped_column(Float)
-    lon: Mapped[float | None] = mapped_column(Float)
-    source: Mapped[str | None] = mapped_column(String(255))
     last_updated: Mapped[str | None] = mapped_column(String(64))
 
     city: Mapped[City | None] = relationship(back_populates="museums")
@@ -48,7 +41,6 @@ class MuseumStat(Base):
     museum_id: Mapped[int] = mapped_column(ForeignKey("museums.id"))
     year: Mapped[int] = mapped_column(Integer, index=True)
     visitors: Mapped[int] = mapped_column(Integer)
-    source: Mapped[str | None] = mapped_column(String(255))
     last_updated: Mapped[str | None] = mapped_column(String(64))
 
     museum: Mapped[Museum] = relationship(back_populates="stats")

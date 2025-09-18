@@ -21,7 +21,7 @@ async def fetch_city_population(wikidata_qid: str) -> Dict[str, Any]:
         
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(
-                settings.wikidata_sparql_endpoint, 
+                settings.wikidata_endpoint, 
                 params={"query": query, "format": "json"}
             )
             resp.raise_for_status()
@@ -57,7 +57,7 @@ async def search_city_by_name(city_name: str, country: str = None) -> Optional[s
         
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.get(
-                settings.wikidata_sparql_endpoint,
+                settings.wikidata_endpoint,
                 params={"query": query, "format": "json"}
             )
             resp.raise_for_status()
@@ -75,37 +75,3 @@ async def search_city_by_name(city_name: str, country: str = None) -> Optional[s
     return None
 
 
-def get_sample_city_populations() -> Dict[str, Dict[str, Any]]:
-    """Return sample city population data for demonstration."""
-    return {
-        "Paris": {
-            "population": 11000000,
-            "year": 2023,
-            "city_name": "Paris",
-            "wikidata_id": "Q90"
-        },
-        "Beijing": {
-            "population": 22000000,
-            "year": 2023,
-            "city_name": "Beijing",
-            "wikidata_id": "Q956"
-        },
-        "New York City": {
-            "population": 19000000,
-            "year": 2023,
-            "city_name": "New York City",
-            "wikidata_id": "Q60"
-        },
-        "Vatican City": {
-            "population": 800,
-            "year": 2023,
-            "city_name": "Vatican City",
-            "wikidata_id": "Q237"
-        },
-        "London": {
-            "population": 9000000,
-            "year": 2023,
-            "city_name": "London",
-            "wikidata_id": "Q84"
-        }
-    }

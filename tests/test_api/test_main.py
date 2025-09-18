@@ -23,6 +23,18 @@ def test_features_empty(client: TestClient):
     assert data["columns"] == expected_columns
 
 
+def test_etl_run(client: TestClient):
+    """Test ETL run endpoint."""
+    response = client.post("/etl/run")
+    assert response.status_code == 200
+    data = response.json()
+    assert "status" in data
+    assert "museums" in data
+    assert "cities" in data
+    # year field should not be present anymore
+    assert "year" not in data
+
+
 def test_model_linear_empty(client: TestClient):
     """Test linear model endpoint returns empty metrics."""
     response = client.get("/model/linear")

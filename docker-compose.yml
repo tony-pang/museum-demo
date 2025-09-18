@@ -34,6 +34,8 @@ services:
     container_name: museum-notebook
     env_file:
       - .env
+    environment:
+      - API_BASE_URL=http://host.docker.internal:8000
     ports:
       - "8888:8888"
     volumes:

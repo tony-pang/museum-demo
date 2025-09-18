@@ -1,15 +1,13 @@
 """Feature engineering for museum attendance data."""
 from typing import Tuple
 import pandas as pd
-from sqlalchemy.orm import Session
+import numpy as np
 from src.db.session import SessionLocal
 from src.db.models import Museum, City, MuseumStat
 
 
-def load_features() -> Tuple[pd.DataFrame, list[str]]:
+def load_features() -> pd.DataFrame:
     """Load features from the database by joining museums, cities, and stats."""
-    columns = ["museum_id", "museum_name", "city_id", "city_name", "year", "visitors", "population"]
-    
     try:
         with SessionLocal() as db:
             # Query to join all tables
@@ -31,7 +29,7 @@ def load_features() -> Tuple[pd.DataFrame, list[str]]:
             results = query.all()
             
             if not results:
-                return pd.DataFrame(columns=columns), columns
+                return pd.DataFrame(columns=["museum_id", "museum_name", "city_id", "city_name", "year", "visitors", "population"])
             
             # Convert to list of dictionaries
             data = []
@@ -47,8 +45,21 @@ def load_features() -> Tuple[pd.DataFrame, list[str]]:
                 })
             
             df = pd.DataFrame(data)
-            return df, columns
+            
+            # Clean up data - replace NaN and infinite values
+            df = df.replace([np.inf, -np.inf], np.nan)
+            df = df.fillna(0)
+            
+            # Ensure numeric columns are properly typed
+            if 'population' in df.columns:
+                df['population'] = pd.to_numeric(df['population'], errors='coerce').fillna(0).astype(int)
+            if 'visitors' in df.columns:
+                df['visitors'] = pd.to_numeric(df['visitors'], errors='coerce').fillna(0).astype(int)
+            if 'year' in df.columns:
+                df['year'] = pd.to_numeric(df['year'], errors='coerce').fillna(2023).astype(int)
+            
+            return df
             
     except Exception as e:
         print(f"Error loading features: {e}")
-        return pd.DataFrame(columns=columns), columns
+        return pd.DataFrame(columns=["museum_id", "museum_name", "city_id", "city_name", "year", "visitors", "population"])

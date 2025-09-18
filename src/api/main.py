@@ -10,14 +10,10 @@ Intended for use in analyzing and modeling museum attendance data.
 """
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict, Any
-from sqlalchemy.orm import Session
-from src.db.session import SessionLocal
-from src.db.models import Museum, City, MuseumStat
+
 from src.etl.pipeline import run_etl
 from src.ml.features import load_features
 from src.ml.model import fit_linear_regression
-import numpy as np
 
 app = FastAPI(title="Museum Attendance API", version="0.1.0")
 
@@ -28,7 +24,6 @@ class Health(BaseModel):
 
 class ETLResponse(BaseModel):
     status: str
-    year: int
     museums: int
     cities: int
     error: str = None
@@ -40,38 +35,38 @@ def healthcheck() -> Health:
 
 
 @app.post("/etl/run", response_model=ETLResponse)
-def trigger_etl(year: int = None):
+def trigger_etl():
     """Trigger the ETL pipeline to fetch and process museum data."""
     try:
-        result = run_etl(year)
+        result = run_etl()
         return ETLResponse(**result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/features")
 def get_features():
     """Get the merged dataset of museums, cities, and populations."""
     try:
-        df, columns = load_features()
+        df = load_features()
         
         # Convert DataFrame to list of rows
         rows = df.to_dict('records') if not df.empty else []
         
         return {
-            "columns": columns,
+            "columns": df.columns.tolist(),
             "rows": rows,
             "count": len(rows)
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/model/linear")
 def model_linear():
     """Run linear regression on museum visitors vs city population."""
     try:
-        df, _ = load_features()
+        df = load_features()
         
         if df.empty:
             return {
@@ -102,4 +97,4 @@ def model_linear():
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
