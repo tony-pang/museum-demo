@@ -112,7 +112,6 @@ def _get_or_create_city(db: Session, museum_data: Dict[str, Any], city_populatio
         population=population_data.get("population", 0) if population_data else 0,
         population_year=int(population_data.get("year", 2023)) if population_data else 2023,
         wikidata_id=population_data.get("wikidata_id") if population_data else None,
-        source="wikidata",
         last_updated=current_time
     )
     
@@ -143,7 +142,6 @@ def _create_museum(db: Session, museum_data: Dict[str, Any], city: City | None) 
             name=museum_name,
             city_id=city_id,
             wikidata_id=None,  # Could be fetched from Wikidata
-            source=museum_data.get("source", "wikipedia"),
             last_updated=current_time
         )
         
@@ -175,7 +173,6 @@ def _create_museum_stats(db: Session, museum: Museum, museum_data: Dict[str, Any
             museum_id=museum.id,
             year=int(museum_data.get("year", 0)),
             visitors=int(museum_data.get("visitors", 0)),
-            source=museum_data.get("source", "wikipedia"),
             last_updated=current_time
         )
         

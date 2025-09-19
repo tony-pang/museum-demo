@@ -21,10 +21,11 @@ def test_museum_model():
     museum = Museum(
         wikidata_id="Q456",
         name="Louvre",
-        wikipedia_url="https://en.wikipedia.org/wiki/Louvre"
+        city_id=1
     )
     assert museum.name == "Louvre"
     assert museum.wikidata_id == "Q456"
+    assert museum.city_id == 1
 
 
 def test_museum_stat_model():

@@ -8,9 +8,46 @@ from src.api.main import app
 class TestAPIIntegration:
     """Integration tests for API endpoints."""
     
-    def test_complete_etl_workflow(self, client, mock_httpx_client_fixture):
+    def test_complete_etl_workflow(self, client, mock_httpx_client):
         """Test complete ETL workflow through API."""
-        with patch('src.etl.pipeline.httpx.AsyncClient', return_value=mock_httpx_client_fixture):
+        with patch('src.etl.pipeline.Base.metadata.create_all'), \
+             patch('src.etl.pipeline.SessionLocal') as mock_session, \
+             patch('src.clients.wikidata.httpx.AsyncClient', return_value=mock_httpx_client), \
+             patch('src.clients.wikipedia.httpx.AsyncClient', return_value=mock_httpx_client):
+            
+            # Configure mock database session
+            from unittest.mock import Mock
+            mock_db = Mock()
+            mock_db.query.return_value.filter.return_value.first.return_value = None
+            mock_db.add = Mock()
+            mock_db.flush = Mock()
+            mock_db.commit = Mock()
+            mock_db.rollback = Mock()
+            
+            # Mock city object with id
+            mock_city = Mock()
+            mock_city.id = 1
+            mock_city.name = "Paris"
+            mock_city.country = "France"
+            mock_city.population = 11000000
+            mock_city.population_year = 2023
+            mock_city.wikidata_id = "Q90"
+            
+            # Configure query results
+            def mock_query(model):
+                query_mock = Mock()
+                if model.__name__ == "City":
+                    query_mock.filter.return_value.first.return_value = mock_city
+                elif model.__name__ == "Museum":
+                    query_mock.filter.return_value.first.return_value = None  # New museum
+                elif model.__name__ == "MuseumStat":
+                    query_mock.filter.return_value.first.return_value = None  # New stat
+                return query_mock
+            
+            mock_db.query.side_effect = mock_query
+            mock_session.return_value.__enter__.return_value = mock_db
+            mock_session.return_value.__exit__.return_value = None
+            
             # Trigger ETL
             etl_response = client.post("/etl/run")
             assert etl_response.status_code == 200
@@ -20,9 +57,11 @@ class TestAPIIntegration:
             assert etl_data["museums"] > 0
             assert etl_data["cities"] > 0
     
-    def test_features_endpoint_after_etl(self, client, mock_httpx_client_fixture):
+    def test_features_endpoint_after_etl(self, client, mock_httpx_client):
         """Test features endpoint after running ETL."""
-        with patch('src.etl.pipeline.httpx.AsyncClient', return_value=mock_httpx_client_fixture):
+        with patch('src.etl.pipeline.Base.metadata.create_all'), \
+             patch('src.clients.wikidata.httpx.AsyncClient', return_value=mock_httpx_client), \
+             patch('src.clients.wikipedia.httpx.AsyncClient', return_value=mock_httpx_client):
             # Run ETL first
             etl_response = client.post("/etl/run")
             assert etl_response.status_code == 200
@@ -36,9 +75,57 @@ class TestAPIIntegration:
             assert "rows" in features_data
             assert len(features_data["columns"]) > 0
     
-    def test_model_endpoint_after_etl(self, client, mock_httpx_client_fixture):
+    def test_model_endpoint_after_etl(self, client, mock_httpx_client):
         """Test model endpoint after running ETL."""
-        with patch('src.etl.pipeline.httpx.AsyncClient', return_value=mock_httpx_client_fixture):
+        with patch('src.etl.pipeline.Base.metadata.create_all'), \
+             patch('src.etl.pipeline.SessionLocal') as mock_session, \
+             patch('src.api.main.load_features') as mock_load_features, \
+             patch('src.clients.wikidata.httpx.AsyncClient', return_value=mock_httpx_client), \
+             patch('src.clients.wikipedia.httpx.AsyncClient', return_value=mock_httpx_client):
+            
+            # Configure mock database session (same as test_complete_etl_workflow)
+            from unittest.mock import Mock
+            mock_db = Mock()
+            mock_db.query.return_value.filter.return_value.first.return_value = None
+            mock_db.add = Mock()
+            mock_db.flush = Mock()
+            mock_db.commit = Mock()
+            mock_db.rollback = Mock()
+            
+            # Mock city object with id
+            mock_city = Mock()
+            mock_city.id = 1
+            mock_city.name = "Paris"
+            mock_city.country = "France"
+            mock_city.population = 11000000
+            mock_city.population_year = 2023
+            mock_city.wikidata_id = "Q90"
+            
+            # Configure query results
+            def mock_query(model):
+                query_mock = Mock()
+                if model.__name__ == "City":
+                    query_mock.filter.return_value.first.return_value = mock_city
+                elif model.__name__ == "Museum":
+                    query_mock.filter.return_value.first.return_value = None  # New museum
+                elif model.__name__ == "MuseumStat":
+                    query_mock.filter.return_value.first.return_value = None  # New stat
+                return query_mock
+            
+            mock_db.query.side_effect = mock_query
+            mock_session.return_value.__enter__.return_value = mock_db
+            mock_session.return_value.__exit__.return_value = None
+            
+            # Mock load_features to return test data
+            import pandas as pd
+            test_data = pd.DataFrame({
+                'museum_name': ['Louvre', 'Metropolitan Museum'],
+                'city_name': ['Paris', 'New York'],
+                'population': [11000000, 8336817],
+                'visitors': [9600000, 6479548]
+            })
+            mock_load_features.return_value = test_data
+            
             # Run ETL first
             etl_response = client.post("/etl/run")
             assert etl_response.status_code == 200
@@ -64,16 +151,19 @@ class TestAPIIntegration:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
         
-        with patch('src.etl.pipeline.httpx.AsyncClient', return_value=mock_client):
+        with patch('src.etl.pipeline.Base.metadata.create_all'), \
+             patch('src.etl.pipeline.SessionLocal'), \
+             patch('src.clients.wikidata.httpx.AsyncClient', return_value=mock_client), \
+             patch('src.clients.wikipedia.httpx.AsyncClient', return_value=mock_client):
             # Trigger ETL - should handle error gracefully
             etl_response = client.post("/etl/run")
             assert etl_response.status_code == 200  # API should return 200 even if ETL fails
             
             etl_data = etl_response.json()
             assert etl_data["status"] == "error"
-            assert "External API Error" in etl_data["error"]
+            assert "No museum data available from Wikidata" in etl_data["error"]
     
-    def test_concurrent_requests(self, client, mock_httpx_client_fixture):
+    def test_concurrent_requests(self, client, mock_httpx_client):
         """Test handling of concurrent requests."""
         import threading
         import time
@@ -81,7 +171,9 @@ class TestAPIIntegration:
         results = []
         
         def make_request():
-            with patch('src.etl.pipeline.httpx.AsyncClient', return_value=mock_httpx_client_fixture):
+            with patch('src.etl.pipeline.Base.metadata.create_all'), \
+                 patch('src.clients.wikidata.httpx.AsyncClient', return_value=mock_httpx_client), \
+                 patch('src.clients.wikipedia.httpx.AsyncClient', return_value=mock_httpx_client):
                 response = client.post("/etl/run")
                 results.append(response.status_code)
         

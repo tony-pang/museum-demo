@@ -25,7 +25,7 @@ async def fetch_city_population(wikidata_qid: str) -> Dict[str, Any]:
                 params={"query": query, "format": "json"}
             )
             resp.raise_for_status()
-            data = resp.json()
+            data = await resp.json()
             
             bindings = data.get("results", {}).get("bindings", [])
             if bindings:
@@ -61,7 +61,7 @@ async def search_city_by_name(city_name: str, country: str = None) -> Optional[s
                 params={"query": query, "format": "json"}
             )
             resp.raise_for_status()
-            data = resp.json()
+            data = await resp.json()
             
             bindings = data.get("results", {}).get("bindings", [])
             if bindings:

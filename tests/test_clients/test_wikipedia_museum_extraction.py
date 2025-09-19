@@ -1,5 +1,6 @@
 """Unit tests for museum data extraction from HTML table cells."""
 import pytest
+from bs4 import BeautifulSoup
 from src.clients.wikipedia import _extract_museum_from_cells
 
 
@@ -8,11 +9,13 @@ class TestExtractMuseumFromCells:
 
     def test_valid_museum_data(self):
         """Test extraction with valid museum data."""
+        # Create Beautiful Soup elements with proper HTML content
+        soup = BeautifulSoup("", 'html.parser')
         cells = [
-            "Louvre",  # Museum name
-            "8,700,000 (2024)",  # Visitors
-            "Paris",  # City
-            "France"  # Country
+            BeautifulSoup("<td>Louvre</td>", 'html.parser').find('td'),  # Museum name
+            BeautifulSoup("<td>8,700,000 (2024)</td>", 'html.parser').find('td'),  # Visitors
+            BeautifulSoup("<td>Paris</td>", 'html.parser').find('td'),  # City
+            BeautifulSoup("<td>France</td>", 'html.parser').find('td')  # Country
         ]
         
         result = _extract_museum_from_cells(cells)
@@ -25,15 +28,16 @@ class TestExtractMuseumFromCells:
 
     def test_museum_with_html_tags_and_references(self):
         """Test extraction with HTML tags and reference numbers."""
+        # Create Beautiful Soup elements with HTML content
         cells = [
-            "[Louvre](/wiki/Louvre \"Louvre\")",  # Museum name with markdown link
-            "8,700,000 (2024)[1]",  # Visitors with reference
-            "[Paris](/wiki/Paris \"Paris\")",  # City with markdown link
-            "![](//upload.wikimedia.org/flag.svg) [France](/wiki/France \"France\")"  # Country with flag
+            BeautifulSoup("<td>[Louvre](/wiki/Louvre \"Louvre\")</td>", 'html.parser').find('td'),  # Museum name with markdown link
+            BeautifulSoup("<td>8,700,000 (2024)[1]</td>", 'html.parser').find('td'),  # Visitors with reference
+            BeautifulSoup("<td>[Paris](/wiki/Paris \"Paris\")</td>", 'html.parser').find('td'),  # City with markdown link
+            BeautifulSoup("<td>![](//upload.wikimedia.org/flag.svg) [France](/wiki/France \"France\")</td>", 'html.parser').find('td')  # Country with flag
         ]
-        
+
         result = _extract_museum_from_cells(cells)
-        
+
         assert result is not None
         assert result["name"] == "[Louvre](/wiki/Louvre Louvre)"  # Markdown links not removed
         assert result["city"] == "[Paris](/wiki/Paris Paris)"  # Markdown links not removed
@@ -42,9 +46,9 @@ class TestExtractMuseumFromCells:
     def test_insufficient_cells(self):
         """Test with insufficient number of cells."""
         cells = [
-            "Louvre",  # Museum name
-            "8,700,000",  # Visitors
-            "Paris"  # City only, no country
+            BeautifulSoup("<td>Louvre</td>", 'html.parser').find('td'),  # Museum name
+            BeautifulSoup("<td>8,700,000</td>", 'html.parser').find('td'),  # Visitors
+            BeautifulSoup("<td>Paris</td>", 'html.parser').find('td')  # City only, no country
         ]
         
         result = _extract_museum_from_cells(cells)
@@ -54,10 +58,10 @@ class TestExtractMuseumFromCells:
     def test_empty_museum_name(self):
         """Test with empty museum name."""
         cells = [
-            "",  # Empty museum name
-            "8,700,000",
-            "Paris",
-            "France"
+            BeautifulSoup("<td></td>", 'html.parser').find('td'),  # Empty museum name
+            BeautifulSoup("<td>8,700,000</td>", 'html.parser').find('td'),
+            BeautifulSoup("<td>Paris</td>", 'html.parser').find('td'),
+            BeautifulSoup("<td>France</td>", 'html.parser').find('td')
         ]
         
         result = _extract_museum_from_cells(cells)
@@ -67,10 +71,10 @@ class TestExtractMuseumFromCells:
     def test_empty_city(self):
         """Test with empty city."""
         cells = [
-            "Louvre",
-            "8,700,000",
-            "",  # Empty city
-            "France"
+            BeautifulSoup("<td>Louvre</td>", 'html.parser').find('td'),
+            BeautifulSoup("<td>8,700,000</td>", 'html.parser').find('td'),
+            BeautifulSoup("<td></td>", 'html.parser').find('td'),  # Empty city
+            BeautifulSoup("<td>France</td>", 'html.parser').find('td')
         ]
         
         result = _extract_museum_from_cells(cells)
@@ -80,14 +84,14 @@ class TestExtractMuseumFromCells:
     def test_complex_html_cleaning(self):
         """Test complex HTML cleaning scenarios."""
         cells = [
-            "<a href='/wiki/Metropolitan_Museum_of_Art'>Metropolitan Museum of Art</a>",
-            "5,727,258 (2024) [6]",
-            "<span>New York City</span>",
-            "![](//upload.wikimedia.org/flag.svg) <a href='/wiki/United_States'>United States</a>"
+            BeautifulSoup("<td><a href='/wiki/Metropolitan_Museum_of_Art'>Metropolitan Museum of Art</a></td>", 'html.parser').find('td'),
+            BeautifulSoup("<td>5,727,258 (2024) [6]</td>", 'html.parser').find('td'),
+            BeautifulSoup("<td><span>New York City</span></td>", 'html.parser').find('td'),
+            BeautifulSoup("<td>![](//upload.wikimedia.org/flag.svg) <a href='/wiki/United_States'>United States</a></td>", 'html.parser').find('td')
         ]
-        
+
         result = _extract_museum_from_cells(cells)
-        
+
         assert result is not None
         assert result["name"] == "Metropolitan Museum of Art"
         assert result["city"] == "New York City"

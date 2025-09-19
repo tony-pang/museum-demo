@@ -2,6 +2,7 @@
 from typing import List, Dict, Any
 import httpx
 import re
+from bs4 import BeautifulSoup
 from src.core.config import settings
 from src.core.logging import logger
 
@@ -40,7 +41,7 @@ async def _fetch_wikipedia_page_content() -> str:
             
             response = await client.get(settings.wikipedia_api_url, params=params)
             response.raise_for_status()
-            data = response.json()
+            data = await response.json()
             
             # Extract the HTML content from the API response
             if 'parse' in data and 'text' in data['parse']:
@@ -53,21 +54,31 @@ async def _fetch_wikipedia_page_content() -> str:
         logger.error(f"Error fetching Wikipedia page via API: {e}")
         return ""
 
-
+# TODO this is very specific to the wikipedia page, it should be more generic
+# e.g. make a factory pattern for different data sources
 def _parse_museum_data_from_content(html_content: str) -> List[Dict[str, Any]]:
-    """Parse museum data from Wikipedia HTML content."""
+    """Parse museum data from Wikipedia HTML content using Beautiful Soup."""
     museums = []
     
     try:
-        # Use regex to find table rows in the HTML
-        # Look for table rows that contain museum data
-        table_pattern = r'<tr[^>]*>(.*?)</tr>'
-        rows = re.findall(table_pattern, html_content, re.DOTALL)[1:] # remove the first header row
+        # Parse HTML with Beautiful Soup
+        soup = BeautifulSoup(html_content, 'html.parser')
         
-        for row in rows:
-            # Extract cells from the row
-            cell_pattern = r'<t[dh][^>]*>(.*?)</t[dh]>'
-            cells = re.findall(cell_pattern, row, re.DOTALL)
+        # Find the table with museum data (look for wikitable class)
+        table = soup.find('table', class_='wikitable')
+        if not table:
+            logger.warning("No wikitable found in Wikipedia content")
+            return museums
+        
+        # Get all rows from tbody (skip thead)
+        tbody = table.find('tbody')
+        if not tbody:
+            logger.warning("No tbody found in Wikipedia content")
+            return museums
+        
+        for row in tbody.find_all('tr'):
+            # Get all cells (only td elements, ignore th)
+            cells = row.find_all('td')
             
             museum_data = _extract_museum_from_cells(cells)
             if museum_data:
@@ -77,6 +88,17 @@ def _parse_museum_data_from_content(html_content: str) -> List[Dict[str, Any]]:
         logger.error(f"Error parsing museum data: {e}")
     
     return museums
+
+
+def _is_valid_float(s: str) -> bool:
+    """Check if a string can be converted to a valid float"""
+    if not s:
+        return False
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
 
 def _extract_visitor_count(visitor_cell: str) -> int:
@@ -102,57 +124,78 @@ def _extract_visitor_count(visitor_cell: str) -> int:
         logger.debug(f"No text match found in visitor_cell: {visitor_cell}")
         return 0
         
-    try:
-        number_part = text_match.group(1).replace(',', '')
-        unit_part = text_match.group(2)  # Could be None or any text
-        
-        visitors = float(number_part)
-
-        if visitors < 0:
-            logger.debug(f"Negative number found in visitor_cell: {visitor_cell}")
-            return 0
-        
-        # Apply multiplication based on unit (or no multiplication if no unit)
-        if unit_part:
-            unit = unit_part.strip().lower()
-            if unit == 'thousand':
-                visitors = visitors * 1_000
-            elif unit == 'million':
-                visitors = visitors * 1_000_000
-            elif unit == 'billion':
-                visitors = visitors * 1_000_000_000
-            # Could add more units here as needed
-    except ValueError as e:
-        logger.error(f"Error extracting visitor count: {e}")
-        pass
+    number_part = text_match.group(1).replace(',', '')
+    unit_part = text_match.group(2)  # Could be None or any text
     
-    return int(visitors)
+    # Check if the number part is a valid float (like Go's strconv.ParseFloat)
+    if not _is_valid_float(number_part):
+        logger.error(f"Invalid number format: '{number_part}'")
+        return 0
+    
+    visitors = float(number_part)
 
+    if visitors < 0:
+        logger.debug(f"Negative number found in visitor_cell: {visitor_cell}")
+        return 0
+    
+    # Apply multiplication based on unit (or no multiplication if no unit)
+    if not unit_part:
+        return int(visitors)
+
+    unit = unit_part.strip().lower()
+    if unit == 'thousand':
+        return int(visitors * 1_000)
+    if unit == 'million':
+        return int(visitors * 1_000_000)
+    if unit == 'billion':
+        return int(visitors * 1_000_000_000)
+    # Could add more units here as needed
+    
+    logger.warning(f"Unknown unit: {unit}, using raw number")
+    return int(visitors)
 
 def clean_html(text: str) -> str:
     """Remove HTML tags, reference numbers, flag images, and clean up whitespace and quotes."""
-    text = re.sub(r'<[^>]+>', '', text)
+    if not text:
+        return ""
+    
+    # Parse with Beautiful Soup to handle HTML properly
+    soup = BeautifulSoup(str(text), 'html.parser')
+    
     # Remove reference numbers like [1], [2]
+    for ref in soup.find_all('sup', class_='reference'):
+        ref.decompose()
+    
+    # Remove flag images and other images
+    for img in soup.find_all('img'):
+        img.decompose()
+    
+    # Get clean text
+    text = soup.get_text()
+    
+    # Remove reference numbers like [1], [2] (fallback for any remaining)
     text = re.sub(r'\[\d+\]', '', text)
-    # Remove flag images like ![](//upload.wikimedia.org/...)
+    
+    # Remove markdown-style flag images like ![](//upload.wikimedia.org/...)
     text = re.sub(r'!\[.*?\]\([^)]+\)', '', text)
+    
     # Clean up whitespace and quotes
     text = text.replace('"', '').strip()
     return text
 
-def _extract_museum_from_cells(cells: List[str]) -> Dict[str, Any]:
-    """Extract museum data from HTML table cells."""
-    try:
-        if len(cells) < 4:  # Need at least museum name, visitors, city and country
-            logger.warning(f"Missing essential data: only {len(cells)} cells provided, need 4")
-            return None
-        
-        # Extract museum name
 
-        museum_name = clean_html(cells[0])
+def _extract_museum_from_cells(cells) -> Dict[str, Any]:
+    """Extract museum data from Beautiful Soup table cells."""
+    if len(cells) < 4:  # Need at least museum name, visitors, city and country
+        logger.warning(f"Missing essential data: only {len(cells)} cells provided, need 4")
+        return None
+    
+    try:
+        # Extract museum name (first cell)
+        museum_name = clean_html(cells[0].get_text())
         
-        # Look for visitor count in the second cell
-        visitor_cell = clean_html(cells[1])
+        # Extract visitor count (second cell)
+        visitor_cell = clean_html(cells[1].get_text())
         
         # Look for year in parentheses (e.g., "1,324,000 (2023)")
         year_match = re.search(r'\((\d{4})\)', visitor_cell)
@@ -160,10 +203,14 @@ def _extract_museum_from_cells(cells: List[str]) -> Dict[str, Any]:
         
         # Extract visitor count from the cell
         visitors = _extract_visitor_count(visitor_cell)
+
+        if visitors < 2_000_000:
+            logger.warning(f"Visitor count is less than 2,000,000: {visitors}")
+            return None
         
         # Extract city (3rd column) and country (4th column)
-        city = clean_html(cells[2]).strip()
-        country = clean_html(cells[3]).strip()
+        city = clean_html(cells[2].get_text()).strip()
+        country = clean_html(cells[3].get_text()).strip()
         
         # Only return if we have essential data
         if not (museum_name and city and country):
@@ -179,9 +226,6 @@ def _extract_museum_from_cells(cells: List[str]) -> Dict[str, Any]:
             "source": "wikipedia_api"
         }
         
-    except Exception as e:
+    except (AttributeError, ValueError, TypeError) as e:
         logger.debug(f"Error extracting museum from cells: {e}")
-    
-    return None
-
-
+        return None

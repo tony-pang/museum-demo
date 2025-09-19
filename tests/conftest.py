@@ -20,10 +20,12 @@ def mock_wikipedia_response():
             "text": {
                 "*": """
                 <table class="wikitable sortable">
-                <tr><th>Museum</th><th>City</th><th>Visitors</th></tr>
-                <tr><td>Louvre</td><td>Paris</td><td>9,600,000 (2023)</td></tr>
-                <tr><td>Metropolitan Museum</td><td>New York</td><td>6,479,548 (2023)</td></tr>
-                <tr><td>British Museum</td><td>London</td><td>5,820,860 (2023)</td></tr>
+                <thead><tr><th>Museum</th><th>Visitors</th><th>City</th><th>Country</th></tr></thead>
+                <tbody>
+                <tr><td>Louvre</td><td>9,600,000 (2023)</td><td>Paris</td><td>France</td></tr>
+                <tr><td>Metropolitan Museum</td><td>6,479,548 (2023)</td><td>New York</td><td>United States</td></tr>
+                <tr><td>British Museum</td><td>5,820,860 (2023)</td><td>London</td><td>United Kingdom</td></tr>
+                </tbody>
                 </table>
                 """
             }
@@ -68,24 +70,26 @@ def mock_httpx_client():
     # Mock Wikipedia API response
     wikipedia_response = AsyncMock()
     wikipedia_response.status_code = 200
-    wikipedia_response.json.return_value = {
+    wikipedia_response.json = AsyncMock(return_value={
         "parse": {
             "text": {
                 "*": """
                 <table class="wikitable sortable">
-                <tr><th>Museum</th><th>City</th><th>Visitors</th></tr>
-                <tr><td>Louvre</td><td>Paris</td><td>9,600,000 (2023)</td></tr>
-                <tr><td>Metropolitan Museum</td><td>New York</td><td>6,479,548 (2023)</td></tr>
+                <thead><tr><th>Museum</th><th>Visitors</th><th>City</th><th>Country</th></tr></thead>
+                <tbody>
+                <tr><td>Louvre</td><td>9,600,000 (2023)</td><td>Paris</td><td>France</td></tr>
+                <tr><td>Metropolitan Museum</td><td>6,479,548 (2023)</td><td>New York</td><td>United States</td></tr>
+                </tbody>
                 </table>
                 """
             }
         }
-    }
+    })
     
     # Mock Wikidata SPARQL response
     wikidata_response = AsyncMock()
     wikidata_response.status_code = 200
-    wikidata_response.json.return_value = {
+    wikidata_response.json = AsyncMock(return_value={
         "results": {
             "bindings": [
                 {
@@ -93,10 +97,16 @@ def mock_httpx_client():
                     "population": {"value": "11000000"},
                     "year": {"value": "2023"},
                     "wikidata_id": {"value": "Q90"}
+                },
+                {
+                    "city": {"value": "New York"},
+                    "population": {"value": "8336817"},
+                    "year": {"value": "2023"},
+                    "wikidata_id": {"value": "Q60"}
                 }
             ]
         }
-    }
+    })
     
     # Configure mock client to return different responses based on URL
     async def mock_get(url, **kwargs):
