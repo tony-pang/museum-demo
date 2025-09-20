@@ -61,12 +61,11 @@ requirements.txt
 README.md
 ```
 
-## Data Validation & Fallback Strategies
+## Data Validation
 
 ### **Current Implementation**
-- **Museum Data**: Fetched from Wikipedia API with year extraction from visitor counts
+- **Museum Data**: Fetched from Wikipedia API and extracted visitor counts
 - **City Population**: Retrieved from Wikidata SPARQL queries
-- **Data Cleaning**: NaN/inf values replaced with 0, numeric columns properly typed
 
 ## Scaling Considerations
 
@@ -85,9 +84,8 @@ README.md
 ## Testing Strategy
 
 ### **Test Types**
-- **Unit Tests**: Fast, isolated tests for individual components
+- **Unit Tests**: isolated tests for individual components
 - **Integration Tests**: Tests with mock servers for external APIs
-- **End-to-End Tests**: Full workflow tests (optional, requires external APIs)
 
 ### **Running Tests**
 
@@ -109,6 +107,6 @@ make test-coverage
 
 ## Notes
 - Data sources: Wikipedia API and Wikidata SPARQL. ETL and modeling are modular for scaling.
-- **Data Quality**: Currently processes all museums regardless of visitor count threshold
+- **Data Quality**: Currently processes all museums with 2M visitor count threshold
 - **Year Handling**: Extracts year from data but doesn't filter by year
 - **Testing**: Comprehensive test suite with mock servers for reliable CI/CD
