@@ -14,7 +14,7 @@ def test_run_etl(mock_asyncio_run, mock_create_all):
         "museums": 5,
         "cities": 3
     }
-    
+
     result = run_etl()
     assert result["status"] == "ok"
     assert "museums" in result

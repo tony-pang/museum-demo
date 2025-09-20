@@ -19,36 +19,36 @@ def main():
     parser.add_argument("--coverage", action="store_true", help="Run with coverage")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--fast", action="store_true", help="Skip slow tests")
-    
+
     args = parser.parse_args()
-    
+
     # Base pytest command
     cmd = ["python", "-m", "pytest"]
-    
+
     # Add test type
     if args.type == "unit":
-        cmd.extend(["tests/test_api", "tests/test_clients", "tests/test_db", 
+        cmd.extend(["tests/test_api", "tests/test_clients", "tests/test_db",
                    "tests/test_etl", "tests/test_ml"])
     elif args.type == "integration":
         cmd.extend(["tests/test_integration"])
     else:  # all
         cmd.extend(["tests/"])
-    
+
     # Add coverage if requested
     if args.coverage:
         cmd.extend(["--cov=src", "--cov-report=html", "--cov-report=term"])
-    
+
     # Add verbose if requested
     if args.verbose:
         cmd.append("-v")
-    
+
     # Skip slow tests if requested
     if args.fast:
         cmd.extend(["-m", "not slow"])
-    
+
     # Run the tests
     exit_code = run_command(cmd)
-    
+
     if exit_code == 0:
         print("\n✅ All tests passed!")
     else:

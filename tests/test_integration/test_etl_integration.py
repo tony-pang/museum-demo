@@ -7,7 +7,7 @@ from src.etl.pipeline import run_etl
 
 class TestETLIntegration:
     """Integration tests for ETL pipeline."""
-    
+
     @patch('src.etl.pipeline.Base.metadata.create_all')
     @patch('src.etl.pipeline.SessionLocal')
     @patch('src.clients.wikidata.httpx.AsyncClient')
@@ -17,7 +17,7 @@ class TestETLIntegration:
         # Configure the mock clients
         mock_wikidata_client.return_value = mock_httpx_client
         mock_wikipedia_client.return_value = mock_httpx_client
-        
+
         # Configure mock database session
         from unittest.mock import Mock
         mock_db = Mock()
@@ -26,22 +26,21 @@ class TestETLIntegration:
         mock_db.flush = Mock()
         mock_db.commit = Mock()
         mock_db.rollback = Mock()
-        
+
         # Mock city object with id
         mock_city = Mock()
         mock_city.id = 1
         mock_city.name = "Paris"
         mock_city.country = "France"
         mock_city.population = 11000000
-        mock_city.population_year = 2023
         mock_city.wikidata_id = "Q90"
-        
+
         # Mock museum object with id
         mock_museum = Mock()
         mock_museum.id = 1
         mock_museum.name = "Louvre"
         mock_museum.city_id = 1
-        
+
         # Configure query results
         def mock_query(model):
             query_mock = Mock()
@@ -52,25 +51,25 @@ class TestETLIntegration:
             elif model.__name__ == "MuseumStat":
                 query_mock.filter.return_value.first.return_value = None  # New stat
             return query_mock
-        
+
         mock_db.query.side_effect = mock_query
-        
+
         mock_session.return_value.__enter__.return_value = mock_db
         mock_session.return_value.__exit__.return_value = None
-        
+
         # Run the ETL pipeline
         result = run_etl()
-        
+
         # Verify the result
         assert result["status"] == "ok"
         assert "museums" in result
         assert "cities" in result
         assert result["museums"] > 0
         assert result["cities"] > 0
-        
+
         # Verify database creation was called
         mock_create_all.assert_called_once()
-    
+
     @patch('src.etl.pipeline.Base.metadata.create_all')
     @patch('src.etl.pipeline.SessionLocal')
     @patch('src.clients.wikipedia.httpx.AsyncClient')
@@ -81,20 +80,20 @@ class TestETLIntegration:
         wikipedia_response = AsyncMock()
         wikipedia_response.status_code = 500
         wikipedia_response.raise_for_status.side_effect = Exception("API Error")
-        
+
         mock_client.get.return_value = wikipedia_response
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_httpx_client.return_value = mock_client
-        
+
         # Run the ETL pipeline
         result = run_etl()
-        
+
         # Verify error handling
         assert result["status"] == "error"
         assert "error" in result
         assert "No museum data available from Wikidata" in result["error"]
-    
+
     @patch('src.etl.pipeline.Base.metadata.create_all')
     @patch('src.etl.pipeline.SessionLocal')
     @patch('src.clients.wikidata.httpx.AsyncClient')
@@ -122,15 +121,15 @@ class TestETLIntegration:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_wikidata_client.return_value = mock_client
-        
+
         # Run the ETL pipeline
         result = run_etl()
-        
+
         # Should still succeed but with no population data
         assert result["status"] == "ok"
         assert result["museums"] > 0
         assert result["cities"] > 0
-    
+
     @patch('src.etl.pipeline.Base.metadata.create_all')
     @patch('src.etl.pipeline.SessionLocal')
     @patch('src.clients.wikipedia.httpx.AsyncClient')
@@ -144,14 +143,14 @@ class TestETLIntegration:
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_wikipedia_client.return_value = mock_client
         mock_wikidata_client.return_value = mock_client
-        
+
         # Run the ETL pipeline
         result = run_etl()
-        
+
         # Verify error handling
         assert result["status"] == "error"
         assert "No museum data available from Wikidata" in result["error"]
-    
+
     @patch('src.etl.pipeline.Base.metadata.create_all')
     @patch('src.etl.pipeline.SessionLocal')
     @patch('src.clients.wikipedia.httpx.AsyncClient')
@@ -169,16 +168,16 @@ class TestETLIntegration:
                 }
             }
         }
-        
+
         mock_client.get.return_value = wikipedia_response
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_wikipedia_client.return_value = mock_client
         mock_wikidata_client.return_value = mock_client
-        
+
         # Run the ETL pipeline
         result = run_etl()
-        
+
         # Should handle gracefully - no museums found is expected
         assert result["status"] == "error"
         assert "No museum data available from Wikidata" in result["error"]

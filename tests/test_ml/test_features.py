@@ -14,5 +14,5 @@ def test_load_features():
 def test_load_features_columns():
     """Test feature columns structure."""
     df = load_features()
-    expected_columns = ["museum_id", "museum_name", "city_id", "city_name", "year", "visitors", "population"]
+    expected_columns = ["museum_id", "museum_name", "city_id", "city_name", "visitors", "population"]
     assert df.columns.tolist() == expected_columns

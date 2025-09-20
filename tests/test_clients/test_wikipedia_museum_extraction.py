@@ -17,9 +17,9 @@ class TestExtractMuseumFromCells:
             BeautifulSoup("<td>Paris</td>", 'html.parser').find('td'),  # City
             BeautifulSoup("<td>France</td>", 'html.parser').find('td')  # Country
         ]
-        
+
         result = _extract_museum_from_cells(cells)
-        
+
         assert result is not None
         assert result["name"] == "Louvre"
         assert result["city"] == "Paris"
@@ -50,9 +50,9 @@ class TestExtractMuseumFromCells:
             BeautifulSoup("<td>8,700,000</td>", 'html.parser').find('td'),  # Visitors
             BeautifulSoup("<td>Paris</td>", 'html.parser').find('td')  # City only, no country
         ]
-        
+
         result = _extract_museum_from_cells(cells)
-        
+
         assert result is None
 
     def test_empty_museum_name(self):
@@ -63,9 +63,9 @@ class TestExtractMuseumFromCells:
             BeautifulSoup("<td>Paris</td>", 'html.parser').find('td'),
             BeautifulSoup("<td>France</td>", 'html.parser').find('td')
         ]
-        
+
         result = _extract_museum_from_cells(cells)
-        
+
         assert result is None
 
     def test_empty_city(self):
@@ -76,9 +76,9 @@ class TestExtractMuseumFromCells:
             BeautifulSoup("<td></td>", 'html.parser').find('td'),  # Empty city
             BeautifulSoup("<td>France</td>", 'html.parser').find('td')
         ]
-        
+
         result = _extract_museum_from_cells(cells)
-        
+
         assert result is None
 
     def test_complex_html_cleaning(self):

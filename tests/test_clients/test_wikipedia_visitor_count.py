@@ -14,8 +14,8 @@ class TestExtractVisitorCount:
         assert _extract_visitor_count("1.5 billion") == 1_500_000_000
         assert _extract_visitor_count("1.2 thousand") == 1_200
         assert _extract_visitor_count("1500000") == 1_500_000
-        assert _extract_visitor_count("2500000.5") == 2_500_000    
-        """Test units with uppercase."""    
+        assert _extract_visitor_count("2500000.5") == 2_500_000
+        """Test units with uppercase."""
         assert _extract_visitor_count("2.5 MILLION") == 2_500_000
 
         """Test units with extra whitespace."""

@@ -1,5 +1,4 @@
 """Feature engineering for museum attendance data."""
-from typing import Tuple
 import pandas as pd
 import numpy as np
 from src.db.session import SessionLocal
@@ -16,7 +15,6 @@ def load_features() -> pd.DataFrame:
                 Museum.name.label('museum_name'),
                 City.id.label('city_id'),
                 City.name.label('city_name'),
-                MuseumStat.year,
                 MuseumStat.visitors,
                 City.population
             ).join(
@@ -24,13 +22,13 @@ def load_features() -> pd.DataFrame:
             ).join(
                 MuseumStat, Museum.id == MuseumStat.museum_id
             )
-            
+
             # Execute query and convert to DataFrame
             results = query.all()
-            
+
             if not results:
-                return pd.DataFrame(columns=["museum_id", "museum_name", "city_id", "city_name", "year", "visitors", "population"])
-            
+                return pd.DataFrame(columns=["museum_id", "museum_name", "city_id", "city_name", "visitors", "population"])
+
             # Convert to list of dictionaries
             data = []
             for row in results:
@@ -39,27 +37,20 @@ def load_features() -> pd.DataFrame:
                     'museum_name': row.museum_name,
                     'city_id': row.city_id,
                     'city_name': row.city_name,
-                    'year': row.year,
                     'visitors': row.visitors,
                     'population': row.population
                 })
-            
+
             df = pd.DataFrame(data)
-            
-            # Clean up data - replace NaN and infinite values
-            df = df.replace([np.inf, -np.inf], np.nan)
-            df = df.fillna(0)
-            
+
             # Ensure numeric columns are properly typed
             if 'population' in df.columns:
                 df['population'] = pd.to_numeric(df['population'], errors='coerce').fillna(0).astype(int)
             if 'visitors' in df.columns:
                 df['visitors'] = pd.to_numeric(df['visitors'], errors='coerce').fillna(0).astype(int)
-            if 'year' in df.columns:
-                df['year'] = pd.to_numeric(df['year'], errors='coerce').fillna(2023).astype(int)
-            
+
             return df
-            
+
     except Exception as e:
         print(f"Error loading features: {e}")
-        return pd.DataFrame(columns=["museum_id", "museum_name", "city_id", "city_name", "year", "visitors", "population"])
+        return pd.DataFrame(columns=["museum_id", "museum_name", "city_id", "city_name", "visitors", "population"])

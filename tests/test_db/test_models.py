@@ -10,7 +10,6 @@ def test_city_model():
         name="Paris",
         country="France",
         population=11000000,
-        population_year=2023
     )
     assert city.name == "Paris"
     assert city.population == 11000000

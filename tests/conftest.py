@@ -1,7 +1,7 @@
 """Pytest configuration and fixtures."""
 import pytest
 import asyncio
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from fastapi.testclient import TestClient
 from src.api.main import app
 
@@ -42,19 +42,16 @@ def mock_wikidata_response():
                 {
                     "city": {"value": "Paris"},
                     "population": {"value": "11000000"},
-                    "year": {"value": "2023"},
                     "wikidata_id": {"value": "Q90"}
                 },
                 {
                     "city": {"value": "New York"},
                     "population": {"value": "8336817"},
-                    "year": {"value": "2023"},
                     "wikidata_id": {"value": "Q60"}
                 },
                 {
                     "city": {"value": "London"},
                     "population": {"value": "8982000"},
-                    "year": {"value": "2023"},
                     "wikidata_id": {"value": "Q84"}
                 }
             ]
@@ -66,11 +63,11 @@ def mock_wikidata_response():
 def mock_httpx_client():
     """Mock httpx client for external API calls."""
     mock_client = AsyncMock()
-    
+
     # Mock Wikipedia API response
     wikipedia_response = AsyncMock()
     wikipedia_response.status_code = 200
-    wikipedia_response.json = AsyncMock(return_value={
+    wikipedia_response.json = Mock(return_value={
         "parse": {
             "text": {
                 "*": """
@@ -85,29 +82,27 @@ def mock_httpx_client():
             }
         }
     })
-    
+
     # Mock Wikidata SPARQL response
     wikidata_response = AsyncMock()
     wikidata_response.status_code = 200
-    wikidata_response.json = AsyncMock(return_value={
+    wikidata_response.json = Mock(return_value={
         "results": {
             "bindings": [
                 {
                     "city": {"value": "Paris"},
                     "population": {"value": "11000000"},
-                    "year": {"value": "2023"},
                     "wikidata_id": {"value": "Q90"}
                 },
                 {
                     "city": {"value": "New York"},
                     "population": {"value": "8336817"},
-                    "year": {"value": "2023"},
                     "wikidata_id": {"value": "Q60"}
                 }
             ]
         }
     })
-    
+
     # Configure mock client to return different responses based on URL
     async def mock_get(url, **kwargs):
         if "wikipedia.org" in url:
@@ -116,11 +111,11 @@ def mock_httpx_client():
             return wikidata_response
         else:
             raise ValueError(f"Unexpected URL: {url}")
-    
+
     mock_client.get = mock_get
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=None)
-    
+
     return mock_client
 
 

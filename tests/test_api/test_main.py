@@ -19,7 +19,7 @@ def test_features_empty(client: TestClient):
     assert "columns" in data
     assert "rows" in data
     assert data["rows"] == []
-    expected_columns = ["museum_id", "museum_name", "city_id", "city_name", "year", "visitors", "population"]
+    expected_columns = ["museum_id", "museum_name", "city_id", "city_name", "visitors", "population"]
     assert data["columns"] == expected_columns
 
 

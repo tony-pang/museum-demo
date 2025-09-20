@@ -12,6 +12,6 @@ async def test_fetch_most_visited_museums():
         mock_response.status_code = 200
         mock_response.json.return_value = {"query": {"pages": []}}
         mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
-        
+
         result = await fetch_most_visited_museums()
         assert isinstance(result, list)

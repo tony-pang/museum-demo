@@ -49,10 +49,10 @@ def get_features():
     """Get the merged dataset of museums, cities, and populations."""
     try:
         df = load_features()
-        
+
         # Convert DataFrame to list of rows
         rows = df.to_dict('records') if not df.empty else []
-        
+
         return {
             "columns": df.columns.tolist(),
             "rows": rows,
@@ -67,7 +67,7 @@ def model_linear():
     """Run linear regression on museum visitors vs city population."""
     try:
         df = load_features()
-        
+
         if df.empty:
             return {
                 "model": "linear_regression",
@@ -77,14 +77,14 @@ def model_linear():
                 "rmse": None,
                 "notes": "No data available. Run ETL first."
             }
-        
+
         # Prepare features for regression
         X = df[['population']].values
         y = df['visitors'].values
-        
+
         # Fit the model
         result = fit_linear_regression(X, y)
-        
+
         return {
             "model": "linear_regression",
             "n_samples": result["n_samples"],
@@ -95,6 +95,6 @@ def model_linear():
             "intercept": result.get("intercept", 0),
             "notes": "Linear regression of visitors vs city population"
         }
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
